@@ -1,0 +1,40 @@
+OASISFormat: 0.4
+Name:        tdk
+Version:     0.1.0
+Synopsis:    The Decision Kit
+Authors:     Spiros Eliopoulos
+License:     BSD-3-clause
+Plugins:     Meta (0.4), DevFiles (0.4)
+BuildTools:  ocamlbuild
+
+Library tdk
+  Path:             lib
+  Findlibname:      tdk
+  Pack:             true
+  Modules:          S, Bdd, Vcr, Vlr
+
+Executable test_vcr
+  Path:             lib_test
+  MainIs:           test_vcr.ml
+  Build$:           flag(tests)
+  CompiledObject:   best
+  Install:          false
+  BuildDepends:     tdk, oUnit (>= 1.0.2)
+
+Executable test_bdd
+  Path:             lib_test
+  MainIs:           test_bdd.ml
+  Build$:           flag(tests)
+  CompiledObject:   best
+  Install:          false
+  BuildDepends:     tdk, oUnit (>= 1.0.2)
+
+Test test_bdd
+  Run$:             flag(tests)
+  Command:          $test_bdd
+  WorkingDirectory: lib_test
+
+Test test_vcr
+  Run$:             flag(tests)
+  Command:          $test_vcr
+  WorkingDirectory: lib_test

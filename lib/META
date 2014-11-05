@@ -1,0 +1,11 @@
+# OASIS_START
+# DO NOT EDIT (digest: 0fa200ccbce77f868e7ff1412069d213)
+version = "0.1.0"
+description = "The Decision Kit"
+archive(byte) = "tdk.cma"
+archive(byte, plugin) = "tdk.cma"
+archive(native) = "tdk.cmxa"
+archive(native, plugin) = "tdk.cmxs"
+exists_if = "tdk.cma"
+# OASIS_STOP
+
