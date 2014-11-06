@@ -4,6 +4,8 @@ The decision kit is a collection of data structures that useful for
 representing functions, relations, and other combinatorial objects. All these
 data strctures are based on a generalization of binary decision diagrams.
 
+[![Build Status](https://travis-ci.org/frenetic-lang/ocaml-tdk.png)](https://travis-ci.org/frenetic-lang/ocaml-tdk)
+
 ## Installation
 
 Tdk has no dependencies. To install the library, simply clone the repository,
