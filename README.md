@@ -1,8 +1,9 @@
 # tdk - The Decision Kit
 
-The decision kit is a collection of data structures that useful for
-representing functions, relations, and other combinatorial objects. All these
-data strctures are based on a generalization of binary decision diagrams.
+The Decision Kit is a collection of data structures are that useful for
+representing functions, relations, and other combinatorial objects. These data
+strctures are based on various generalizations of reduced ordered binary
+decision diagrams.
 
 [![Build Status](https://travis-ci.org/frenetic-lang/ocaml-tdk.png)](https://travis-ci.org/frenetic-lang/ocaml-tdk)
 
@@ -33,11 +34,11 @@ The library supports three data structures:
   * `Vlr` - a Variable-Lattice-Result diagram for representing functions over
     variables that are assigned values in a lattice, producing a result with an
     algebraic structure.
-  * `Vcr` - a Variable-Constant-Result diagram for representing functions
-    over variables that are assigned values in a total ordering, producing
-    results with an algebraic structure.
-  * `Bdd` - a Binary Decision Diagram for representing boolean-valued functions
-    over boolean variables.
+  * `Vcr` - a Variable-Constant-Result diagram for representing functions over
+    variables that are assigned values in a total ordering, producing results
+    with an algebraic structure.
+  * `Bdd` - a Reduced Ordered Binary Decision Diagram for representing
+    boolean-valued functions over boolean variables.
 
 Each of these data structures is implemented as a functor. Here's an example of
 how to instantiate and use the `Bdd` functor for variables represented as
@@ -59,7 +60,7 @@ let a = B.var 0l
 let b = B.var 1l
 let c = B.var 2l
 
-(* `((a /\ b) -> c) -> (a -> b -> c)` is a tautology *)
+(* `(a /\ b) -> c) -> (a -> b -> c)` is a tautology *)
 assert B.(tautology (impl (impl (prod a b) c)
                           (impl a (impl b c))))
 ```
@@ -71,7 +72,7 @@ assert B.(tautology (impl (impl (prod a b) c)
 > Hey! Looking for a way to the hype  
 > "Welcome to the underground!" Shit, that's just a day in the life
 
-&mdash; Cashmere the Pro, *Filthy Nasty by Cunninlynguists*
+&mdash; Cashmere the Pro, *Nasty Filthy by CunninLynguists*
 
 ## License
 
