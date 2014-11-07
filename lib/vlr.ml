@@ -137,8 +137,14 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   let rec prod x y =
     match x.d, y.d with
-    | Leaf r, _      -> map_r (R.prod r) y
-    | _     , Leaf r -> map_r (fun x -> R.prod x r) x
+    | Leaf r, _      ->
+      if R.(compare r zero) = 0 then x
+      else if R.(compare r one) = 0 then y
+      else map_r (R.prod r) y
+    | _     , Leaf r ->
+      if R.(compare zero r) = 0 then y
+      else if R.(compare one r) = 0 then x
+      else map_r (fun x -> R.prod x r) x
     | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
       begin match V.compare vx vy with
       |  0 ->
@@ -159,8 +165,12 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   let rec sum x y =
     match x.d, y.d with
-    | Leaf r, _      -> map_r (R.sum r) y
-    | _     , Leaf r -> map_r (fun x -> R.sum x r) x
+    | Leaf r, _      ->
+      if R.(compare r zero) = 0 then y
+      else map_r (R.sum r) y
+    | _     , Leaf r ->
+      if R.(compare zero r) = 0 then x
+      else map_r (fun x -> R.sum x r) x
     | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
       begin match V.compare vx vy with
       |  0 ->
