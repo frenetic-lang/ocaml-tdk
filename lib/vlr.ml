@@ -117,14 +117,14 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   let const r = mk_leaf r
   let atom (v, l) t f = mk_branch v l (const t) (const f)
 
-  let rec restrict (v, c) t =
-    match t.d with
-    | Leaf r -> mk_leaf r
-    | Branch(v', c', t, f) ->
+  let rec restrict (v, l) u =
+    match u.d with
+    | Leaf r -> u
+    | Branch(v', l', t, f) ->
       match V.compare v v' with
-      |  0 -> if L.subset_eq c c' then restrict (v, c) t else restrict (v, c) f
-      | -1 -> mk_branch v' c' t f
-      |  1 -> mk_branch v' c' (restrict (v, c) t) (restrict (v, c) f)
+      |  0 -> if L.subset_eq l l' then restrict (v, l) t else restrict (v, l) f
+      | -1 -> u
+      |  1 -> mk_branch v' l' (restrict (v, l) t) (restrict (v, l) f)
       |  _ -> assert false
 
   let peek t = match t.d with
