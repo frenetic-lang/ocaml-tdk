@@ -31,8 +31,9 @@ module type Lattice = sig
 
   val meet : ?tight:bool -> t -> t -> t option
   (** [meet ~tight a b] returns the greatest lower bound of the elements [a]
-      and [b], if one exists. If the optional argument [tight] is set to
-      [true], then the result [c] should satisfy the additional property:
+      and [b], if one exists. This operation should be associative, commutative,
+      and idempotent. If the optional argument [tight] is set to [true], then
+      the result [c] should satisfy the additional property:
 
           ∀x, [subset_eq c x] <=> [subset_eq a x || subset_eq b x || equal c x].
 
@@ -42,8 +43,9 @@ module type Lattice = sig
 
   val join : ?tight:bool -> t -> t -> t option
   (** [join ~tight a b] returns the least upper bound of the elements [a] and
-      [b], if one exists. If the optional argument [tight] is set to [true],
-      then the result [c] should satisfy the additional property:
+      [b], if one exists. This operation should be associative, commutative, and
+      idempotent. If the optional argument [tight] is set to [true], then the
+      result [c] should satisfy the additional property:
 
           ∀x, [subset_eq x c] <=> [subset_eq x a || subset_eq x b || equal x c].
 
