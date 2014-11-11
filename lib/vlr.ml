@@ -9,14 +9,16 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     | Branch of V.t * L.t * t * t
   and t
     = { id : int; d : d }
-  (* A tree structure representing the decision diagram. Branches appear in
-   * descending order according to the variable order and then lattice order,
-   * i.e., typical tuple ordering for the type (v * l). This invariant must be
-   * preserved when constructing a VLR, both for correctness and efficiency.
+  (* A tree structure representing the decision diagram. The [Leaf] variant
+   * represents a constant function. The [Branch(v, l, t, f)] represents an
+   * if-then-else. When variable [v] takes on the value [l], then [t] should
+   * hold. Otherwise, [f] should hold.
    *
-   * The [Leaf] variant represents a constant function. The [Branch(v, l, t, f)]
-   * represents a an if-then-else. When variable [v] takes on the value [l],
-   * then [t] should hold. Otherwise, [f] should hold.
+   * [Branch] nodes appear in an order determined first by the total order on
+   * the [V.t] value with with ties broken by the total order on [L.t]. The
+   * least such pair should appear at the root of the diagram, with each child
+   * nodes being strictly greater than their parent node. This invariant is
+   * important both for efficiency and correctness.
    * *)
 
   let equal x y =
@@ -30,7 +32,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   type this_t = t
 
   (* This module implements a cache of decision diagrams using a weak hash
-   * table. This is used to implement sharing of subdiagrams, which will reduce
+   * table. This is used to implement sharing of sub-diagrams, which will reduce
    * overall memory useage.
    *
    * NOTE: Code outside of this submodule should not construct a value of type
@@ -87,7 +89,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     (* When the ids of the diagrams are equal, then the diagram will take on the
        same value regardless of variable assignment. The node that's being
        constructed can therefore be eliminated and replaced with one of the
-       subdiagrams, which are identical.
+       sub-diagrams, which are identical.
 
        If the ids are distinct, then the node has to be constructed and assigned
        a new id. *)
