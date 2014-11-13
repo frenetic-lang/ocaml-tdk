@@ -124,7 +124,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     | Leaf r -> u
     | Branch(v', l', t, f) ->
       match V.compare v v' with
-      |  0 -> if L.subset_eq l l' then restrict (v, l) t else restrict (v, l) f
+      |  0 -> if L.subset_eq l l' then t else restrict (v, l) f
       | -1 -> u
       |  1 -> mk_branch v' l' (restrict (v, l) t) (restrict (v, l) f)
       |  _ -> assert false
