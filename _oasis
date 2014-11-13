@@ -13,6 +13,14 @@ Library tdk
   Pack:             true
   Modules:          S, Bdd, Vcr, Vlr
 
+Document tdk
+  Title:                Tdk Docs
+  Type:                 ocamlbuild (0.4)
+  BuildTools+:          ocamldoc
+  Install:              true
+  XOCamlbuildPath:      lib
+  XOCamlbuildLibraries: tdk
+
 Executable test_vcr
   Path:             lib_test
   MainIs:           test_vcr.ml
