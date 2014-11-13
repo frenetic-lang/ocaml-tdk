@@ -49,15 +49,14 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         | Leaf r ->
           (R.hash r) lsl 1
         | Branch(v, l, t, f) ->
-          (* XXX(seliopou): pick a better hash function *)
-          (Hashtbl.hash (V.hash v, L.hash l, t.id, f.id)) lor 0x1
+          (1021 * (V.hash v) + 1031 * (L.hash l) + 1033 * t.id + 1039 * f.id) lor 0x1
 
       let equal a b =
         match a.d, b.d with
         | Leaf r1, Leaf r2 -> R.compare r1 r2 = 0
         | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
-          V.compare vx vy = 0 && L.compare lx ly = 0
-            && tx.id = ty.id && fx.id = fy.id
+          V.compare vx vy = 0 && tx.id = ty.id && fx.id = fy.id
+            && L.compare lx ly = 0
         | _, _ -> false
     end)
 
