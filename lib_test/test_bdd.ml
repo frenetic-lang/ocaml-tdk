@@ -23,7 +23,7 @@ let tautologies () =
   let b = var 1l in
   let c = var 2l in
   "((a /\\ b) -> c) with b = false is a tautology"
-    @? (tautology (restrict (1l, false) (impl (prod a b) c)));
+    @? (tautology (restrict [(1l, false)] (impl (prod a b) c)));
   "((a /\\ b) -> c) -> (a -> b -> c) is a tautology"
     @? (tautology (impl (impl (prod a b) c)
                         (impl a (impl b c))))

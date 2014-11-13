@@ -48,22 +48,22 @@ let one_variable () =
   in
   let agree t f =
     List.for_all (fun x ->
-      match F1.(peek (restrict ((), x) t)) with
+      match F1.(peek (restrict [((), x)] t)) with
       | None    -> false
       | Some(v) -> C.compare (f x) v = 0)
     domain
   in
   let f = fun x -> x in
   let t = mk_t f in
-  "`f(x) = x` for x in {1, 2, 3, 4, 5}"
+  "`f(x) = x` for x in {0, 1, 2, 3, 4, 5}"
     @? (agree t f);
   let f = fun x -> Int32.mul x x in
   let t = F1.(prod t t) in
-  "`f(x) = x^2` for x in {1, 2, 3, 4, 5}"
+  "`f(x) = x^2` for x in {0, 1, 2, 3, 4, 5}"
     @? (agree t f);
   let f = fun x -> Int32.(add (mul x x) 3l) in
   let t = F1.(sum t (const 3l)) in
-  "`f(x) = x^2 + 3` for x in {1, 2, 3, 4, 5}"
+  "`f(x) = x^2 + 3` for x in {0, 1, 2, 3, 4, 5}"
     @? (agree t f)
 
 let two_variable () =
@@ -81,7 +81,7 @@ let two_variable () =
   let agree t f =
     List.for_all (fun x ->
       List.for_all (fun y ->
-        let t' = F2.(restrict (V2.Y, y) (restrict (V2.X, x) t)) in
+        let t' = F2.restrict [(V2.Y, y); (V2.X, x)] t in
         match F2.peek t' with
         | None    -> false
         | Some(v) -> C.compare (f x y) v = 0)
@@ -102,11 +102,11 @@ let two_variable () =
     @? (agree t' f);
   let f = fun x y -> Int32.(add (mul x x) y) in
   let t = F2.sum t' t in
-  "`f(x, y) = x^2 + y` for x, y in {1, 2, 3, 4, 5}"
+  "`f(x, y) = x^2 + y` for x, y in {1, 2, 3, 4, 5} (i)"
     @? (agree t f);
   let f = fun x y -> Int32.(add (mul x x) y) in
   let t = mk_t f in
-  "`f(x, y) = x^2 + y` for x, y in {1, 2, 3, 4, 5}"
+  "`f(x, y) = x^2 + y` for x, y in {1, 2, 3, 4, 5} (ii)"
     @? (agree t f)
 
 let disjoint () =

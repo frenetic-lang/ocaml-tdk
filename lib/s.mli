@@ -117,10 +117,14 @@ module type DD = sig
       [v] holds and returns the result [t] if it does hold, and the result [f]
       otherwise. *)
 
-  val restrict : v -> t -> t
-  (** [restrict v t] returns a diagram derived from [t] and that agrees with [t]
-      for every variable assignment in which [v] is true. This will eliminate
-      the variable [v] from the diagram, if present. *)
+  val restrict : v list -> t -> t
+  (** [restrict vs t] returns a diagram derived from [t] and that agrees with
+      [t] when every variable assignment [v] in [vs] is true. This will eliminate
+      the variables in [vs] from the diagram, if present.
+
+      This function assumes that a variable will only appear once in the list of
+      variable assignments. If the list assigns multiple values to a variable,
+      then the behavior is unspecified. *)
 
   val peek : t -> r option
   (** [peek t] check if the diagram is a leaf node. If it is, it will return

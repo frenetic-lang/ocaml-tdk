@@ -118,15 +118,19 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   let const r = mk_leaf r
   let atom (v, l) t f = mk_branch v l (const t) (const f)
 
-  let rec restrict (v, l) u =
-    match u.d with
-    | Leaf r -> u
-    | Branch(v', l', t, f) ->
-      match V.compare v v' with
-      |  0 -> if L.subset_eq l l' then t else restrict (v, l) f
-      | -1 -> u
-      |  1 -> mk_branch v' l' (restrict (v, l) t) (restrict (v, l) f)
-      |  _ -> assert false
+  let restrict lst =
+    let rec loop xs u =
+      match xs, u.d with
+      | []          , _
+      | _           , Leaf _ -> u
+      | (v,l) :: xs', Branch(v', l', t, f) ->
+        match V.compare v v' with
+        |  0 -> if L.subset_eq l l' then loop xs' t else loop xs f
+        | -1 -> loop xs' u
+        |  1 -> mk_branch v' l' (loop xs t) (loop xs f)
+        |  _ -> assert false
+    in
+    loop (List.sort (fun (u, _) (v, _) -> V.compare u v) lst)
 
   let peek t = match t.d with
     | Leaf r   -> Some r
@@ -154,8 +158,8 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         | None    ->
           begin match L.compare lx ly with
           |  0 -> assert false
-          | -1 -> mk_branch vx lx (prod tx (restrict (vx, lx) y)) (prod fx y)
-          |  1 -> mk_branch vy ly (prod (restrict (vy, ly) x) ty) (prod x fy)
+          | -1 -> mk_branch vx lx (prod tx (restrict [(vx, lx)] y)) (prod fx y)
+          |  1 -> mk_branch vy ly (prod (restrict [(vy, ly)] x) ty) (prod x fy)
           |  _ -> assert false
           end
         end
@@ -180,8 +184,8 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         | None    ->
           begin match L.compare lx ly with
           |  0 -> assert false
-          | -1 -> mk_branch vx lx (sum tx (restrict (vx, lx) y)) (sum fx y)
-          |  1 -> mk_branch vy ly (sum (restrict (vy, ly) x) ty) (sum x fy)
+          | -1 -> mk_branch vx lx (sum tx (restrict [(vx, lx)] y)) (sum fx y)
+          |  1 -> mk_branch vy ly (sum (restrict [(vy, ly)] x) ty) (sum x fy)
           |  _ -> assert false
           end
         end
