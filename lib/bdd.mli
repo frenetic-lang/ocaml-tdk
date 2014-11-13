@@ -1,6 +1,10 @@
 open S
 
-(** Binary decision diagram. *)
+(** Binary decision diagram.
+
+    This module implements a reduced, ordered, and shared binary decision
+    diagram. This implementation provide a canonical representation of boolean
+    functions; two diagrams are equal iff they represent the same function. *)
 module Make(V:HashCmp) : sig
   include DD
     with type v = V.t * bool
