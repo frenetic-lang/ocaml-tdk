@@ -8,6 +8,6 @@ open S
 
     For example, using the module one can represent int-valued functions over n
     integer variables. *)
-module Make(V:HashCmp)(C:HashCmp)(R:Result) : DD
+module Make(V:HashCmp)(C:HashCmp)(R:Result) : Diagram
   with type v = V.t * C.t
    and type r = R.t

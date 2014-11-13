@@ -55,6 +55,7 @@ module type Lattice = sig
 
 end
 
+(** The type for a result that has a semi-ring structure *)
 module type Result = sig
   include HashCmp
 
@@ -98,7 +99,7 @@ module type Result = sig
 end
 
 (** The signature of a decision diagram *)
-module type DD = sig
+module type Diagram = sig
 
   type t
   (** The type of a decision diagram *)

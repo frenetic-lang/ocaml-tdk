@@ -6,7 +6,7 @@ open S
     diagram. This implementation provide a canonical representation of boolean
     functions; two diagrams are equal iff they represent the same function. *)
 module Make(V:HashCmp) : sig
-  include DD
+  include Diagram
     with type v = V.t * bool
      and type r = bool
 
