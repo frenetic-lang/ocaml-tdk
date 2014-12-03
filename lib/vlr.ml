@@ -79,7 +79,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       Table.remove t.table { id = 0; d }
   end
 
-  let manager = M.create 10
+  let manager = M.create 100
 
   let mk_leaf r =
     M.get manager (Leaf r)
