@@ -211,4 +211,44 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     iter (fun _ -> ()) (fun v _ _ -> VH.replace s v ()) t;
     VH.fold (fun v () acc -> v :: acc) s []
 
+  let to_dot t =
+    let open Format in
+    let buf = Buffer.create 200 in
+    let fmt = formatter_of_buffer buf in
+    let seen = Hashtbl.create ~random:true 20 in
+    let rank = VH.create 20 in
+    pp_set_margin fmt (1 lsl 29);
+    fprintf fmt "digraph tdk {@\n";
+    let rec loop t =
+      if not (Hashtbl.mem seen t.id) then begin
+        Hashtbl.add seen t.id ();
+        match t.d with
+        | Leaf r ->
+          fprintf fmt "%d [shape=box label=\"%s\"];@\n" t.id (R.to_string r)
+        | Branch(v, l, a, b) ->
+          begin
+            try Hashtbl.add (VH.find rank (v, l)) t.id ()
+            with Not_found ->
+              let s = Hashtbl.create ~random:true 10 in
+              Hashtbl.add s t.id ();
+              VH.add rank (v, l) s
+          end;
+          fprintf fmt "%d [label=\"%s = %s\"];@\n"
+            t.id (V.to_string v) (L.to_string l);
+          fprintf fmt "%d -> %d;@\n" t.id a.id;
+          fprintf fmt "%d -> %d [style=\"dashed\"];@\n" t.id b.id;
+          loop a;
+          loop b
+      end
+    in
+    loop t;
+    VH.iter
+      (fun _ s ->
+         fprintf fmt "{rank=same; ";
+         Hashtbl.iter (fun x () -> fprintf fmt "%d " x) s;
+         fprintf fmt ";}@\n")
+      rank;
+    fprintf fmt "}@.";
+    Buffer.contents buf
+
 end

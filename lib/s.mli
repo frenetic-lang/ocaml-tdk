@@ -190,4 +190,9 @@ module type Diagram = sig
 
   val to_string : t -> string
   (** [to_string t] returns a string representation of the diagram. *)
+
+  val to_dot : t -> string
+  (** [to_dot t] returns a string representation of the diagram using the DOT
+      graph description language. The result of this function can be rendered
+      using Graphviz or any other program that supports the DOT language. *)
 end
