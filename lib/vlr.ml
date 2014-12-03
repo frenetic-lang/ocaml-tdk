@@ -47,9 +47,9 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       let hash t =
         match t.d with
         | Leaf r ->
-          (R.hash r) lsl 1
+          101 * R.hash r
         | Branch(v, l, t, f) ->
-          (1021 * (V.hash v) + 1031 * (L.hash l) + 1033 * t.id + 1039 * f.id) lor 0x1
+          191 * (V.hash v) + 877 * (L.hash l) + 3511 * t.id + 3559 * f.id
 
       let equal a b =
         match a.d, b.d with
@@ -201,7 +201,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       V.compare v1 v2 = 0 && L.compare l1 l2 = 0
 
     let hash (v, l) =
-      1021 * (V.hash v) + 1031 * (L.hash l)
+      191 * (V.hash v) + 877 * (L.hash l)
   end)
 
   let rec support t =
