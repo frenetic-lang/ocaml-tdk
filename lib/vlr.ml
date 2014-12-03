@@ -194,11 +194,21 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       |  _ -> assert false
       end
 
+  module VH = Hashtbl.Make(struct
+    type t = v
+
+    let equal (v1, l1) (v2, l2) =
+      V.compare v1 v2 = 0 && L.compare l1 l2 = 0
+
+    let hash (v, l) =
+      1021 * (V.hash v) + 1031 * (L.hash l)
+  end)
+
   let rec support t =
     (* XXX(seliopou): keep track of diagram size and use that to initialize the
      * hashtable appropriately. *)
-    let s = Hashtbl.create ~random:true 10 in
-    iter (fun _ -> ()) (fun v _ _ -> Hashtbl.replace s v ()) t;
-    Hashtbl.fold (fun v () acc -> v :: acc) s []
+    let s = VH.create 20 in
+    iter (fun _ -> ()) (fun v _ _ -> VH.replace s v ()) t;
+    VH.fold (fun v () acc -> v :: acc) s []
 
 end
