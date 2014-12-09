@@ -620,4 +620,13 @@ let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
 # 622 "myocamlbuild.ml"
 (* OASIS_STOP *)
-Ocamlbuild_plugin.dispatch dispatch_default;;
+
+open Ocamlbuild_plugin
+let () =
+  dispatch (fun hook ->
+       dispatch_default hook;
+       match hook with
+         | After_rules ->
+             if String.sub Sys.ocaml_version 0 4 = "4.00" then
+               flag ["ocaml"; "bin_annot"; "compile"] (A "-bin-annot");
+         | _ -> ())
