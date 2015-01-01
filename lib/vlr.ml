@@ -41,7 +41,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
    * node exists in the cache, then it will be returned. Otherwise, a new
    * structure will be allocated with a fresh identifier. *)
   module M = struct
-    module Table = Weak.Make(struct
+    module Table = Hashtbl.Make(struct
       type t = this_t
 
       let hash t =
@@ -60,7 +60,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         | _, _ -> false
     end)
 
-    type t = { table : Table.t; mutable sym : int }
+    type t = { table : this_t Table.t; mutable sym : int }
 
     let create size = { table = Table.create size; sym = 1 }
     let clear t = Table.clear t.table
@@ -73,7 +73,8 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     let get t d =
       try Table.find t.table { id = 0; d }
       with Not_found ->
-        Table.merge t.table { id = gensym t; d }
+        Table.add t.table { id = gensym t; d };
+        { id = gensym t; d }
 
     let remove t d =
       Table.remove t.table { id = 0; d }
