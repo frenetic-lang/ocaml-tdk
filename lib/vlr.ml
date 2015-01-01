@@ -44,6 +44,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     module Table = Hashtbl.Make(struct
       type t = this_t
 
+      (* TODO(arjun): move hashcode into data strucutre and use smart constructors *)
       let hash t =
         match t.d with
         | Leaf r ->
@@ -81,6 +82,10 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   end
 
   let manager = M.create 10
+
+  let clear_cache () =
+    M.clear manager;
+    manager.sym <- 1
 
   let mk_leaf r =
     M.get manager (Leaf r)

@@ -190,4 +190,7 @@ module type Diagram = sig
 
   val to_string : t -> string
   (** [to_string t] returns a string representation of the diagram. *)
+
+  val clear_cache : unit -> unit
+  (** [clear_cache ()] clears the internal cache of diagrams. *)
 end

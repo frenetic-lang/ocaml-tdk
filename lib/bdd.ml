@@ -48,6 +48,7 @@ module Make(V:HashCmp) = struct
 
   let equal = B.equal
   let to_string = B.to_string
+  let clear_cache = B.clear_cache
 
   let var v = atom (v, true) true false
   let neg t = map_r (fun r -> not r) t
