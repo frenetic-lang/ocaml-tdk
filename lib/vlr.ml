@@ -178,30 +178,36 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       |  _ -> assert false
       end
 
-  let rec sum x y =
-    match T.unget x, T.unget y with
-    | Leaf r, _      ->
-      if R.(compare r zero) = 0 then y
-      else map_r (R.sum r) y
-    | _     , Leaf r ->
-      if R.(compare zero r) = 0 then x
-      else map_r (fun x -> R.sum x r) x
-    | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
-      begin match V.compare vx vy with
-      |  0 ->
-        begin match L.join ~tight:true lx ly with
-        | Some(l) -> mk_branch vx l (sum tx ty) (sum fx fy)
-        | None    ->
-          begin match L.compare lx ly with
-          |  0 -> assert false
-          | -1 -> mk_branch vx lx (sum tx (restrict [(vx, lx)] y)) (sum fx y)
-          |  1 -> mk_branch vy ly (sum (restrict [(vy, ly)] x) ty) (sum x fy)
-          |  _ -> assert false
+  module H = Core.Std.Hashtbl.Poly
+  let sum x y =
+    let tbl : (int * int, int) H.t = H.create () in
+    let rec sum x y = sum' x y
+      H.find_or_add tbl (x, y) ~default:(fun () -> sum' x y)
+    and sum' x y =
+      match T.unget x, T.unget y with
+      | Leaf r, _      ->
+        if R.(compare r zero) = 0 then y
+        else map_r (R.sum r) y
+      | _     , Leaf r ->
+        if R.(compare zero r) = 0 then x
+        else map_r (fun x -> R.sum x r) x
+      | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
+        begin match V.compare vx vy with
+        |  0 ->
+          begin match L.join ~tight:true lx ly with
+          | Some(l) -> mk_branch vx l (sum tx ty) (sum fx fy)
+          | None    ->
+            begin match L.compare lx ly with
+            |  0 -> assert false
+            | -1 -> mk_branch vx lx (sum tx (restrict [(vx, lx)] y)) (sum fx y)
+            |  1 -> mk_branch vy ly (sum (restrict [(vy, ly)] x) ty) (sum x fy)
+            |  _ -> assert false
+            end
           end
+        | -1 -> mk_branch vx lx (sum tx y) (sum fx y)
+        |  1 -> mk_branch vy ly (sum x ty) (sum x fy)
+        |  _ -> assert false
         end
-      | -1 -> mk_branch vx lx (sum tx y) (sum fx y)
-      |  1 -> mk_branch vy ly (sum x ty) (sum x fy)
-      |  _ -> assert false
-      end
+    in sum x y
 
 end
