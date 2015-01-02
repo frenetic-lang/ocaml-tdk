@@ -107,6 +107,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   let mk_leaf r = T.get (Leaf r)
 
+
   let mk_branch v l t f =
     (* When the ids of the diagrams are equal, then the diagram will take on the
        same value regardless of variable assignment. The node that's being
@@ -210,7 +211,6 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         end
     in sum x y
 
-
   let compressed_size (node : t) : int =
     let open Core.Std in
     let rec f (node : t) (seen : Int.Set.t) =
@@ -224,12 +224,62 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
              in the recursive calls *)
           let (hi_size, seen) = f hi seen in
           let (lo_size, seen) = f lo seen in
-          (hi_size + lo_size, Int.Set.add seen node) in
+          (1 + hi_size + lo_size, Int.Set.add seen node) in
     let (size, _) = f node Int.Set.empty in
     size
 
   let rec uncompressed_size (node : t) : int = match T.unget node with
     | Leaf _ -> 1
     | Branch (_, _, hi, lo) -> 1 + uncompressed_size hi + uncompressed_size lo
+
+  module VH = Hashtbl.Make(struct
+    type t = v
+
+    let equal (v1, l1) (v2, l2) =
+      V.compare v1 v2 = 0 && L.compare l1 l2 = 0
+
+    let hash (v, l) =
+      191 * (V.hash v) + 877 * (L.hash l)
+  end)
+
+  let to_dot t =
+    let open Format in
+    let buf = Buffer.create 200 in
+    let fmt = formatter_of_buffer buf in
+    let seen = Hashtbl.create ~random:true 20 in
+    let rank = VH.create 20 in
+    pp_set_margin fmt (1 lsl 29);
+    fprintf fmt "digraph tdk {@\n";
+    let rec loop t =
+      if not (Hashtbl.mem seen t) then begin
+        Hashtbl.add seen t ();
+        match T.unget t with
+        | Leaf r ->
+          fprintf fmt "%d [shape=box label=\"%s\"];@\n" t (R.to_string r)
+        | Branch(v, l, a, b) ->
+          begin
+            try Hashtbl.add (VH.find rank (v, l)) t ()
+            with Not_found ->
+              let s = Hashtbl.create ~random:true 10 in
+              Hashtbl.add s t ();
+              VH.add rank (v, l) s
+          end;
+          fprintf fmt "%d [label=\"%s = %s\"];@\n"
+            t (V.to_string v) (L.to_string l);
+          fprintf fmt "%d -> %d;@\n" t a;
+          fprintf fmt "%d -> %d [style=\"dashed\"];@\n" t b;
+          loop a;
+          loop b
+      end
+    in
+    loop t;
+    VH.iter
+      (fun _ s ->
+         fprintf fmt "{rank=same; ";
+         Hashtbl.iter (fun x () -> fprintf fmt "%d " x) s;
+         fprintf fmt ";}@\n")
+      rank;
+    fprintf fmt "}@.";
+    Buffer.contents buf
 
 end
