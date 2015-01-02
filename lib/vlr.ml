@@ -181,7 +181,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   module H = Core.Std.Hashtbl.Poly
   let sum x y =
     let tbl : (int * int, int) H.t = H.create () in
-    let rec sum x y = sum' x y
+    let rec sum x y =
       H.find_or_add tbl (x, y) ~default:(fun () -> sum' x y)
     and sum' x y =
       match T.unget x, T.unget y with
@@ -209,5 +209,27 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         |  _ -> assert false
         end
     in sum x y
+
+
+  let compressed_size (node : t) : int =
+    let open Core.Std in
+    let rec f (node : t) (seen : Int.Set.t) =
+      if Int.Set.mem seen node then
+        (0, seen)
+      else
+        match T.unget node with
+        | Leaf _ -> (1, Int.Set.add seen node)
+        | Branch (_, _, hi, lo) ->
+          (* Due to variable-ordering, there is no need to add node.id to seen
+             in the recursive calls *)
+          let (hi_size, seen) = f hi seen in
+          let (lo_size, seen) = f lo seen in
+          (hi_size + lo_size, Int.Set.add seen node) in
+    let (size, _) = f node Int.Set.empty in
+    size
+
+  let rec uncompressed_size (node : t) : int = match T.unget node with
+    | Leaf _ -> 1
+    | Branch (_, _, hi, lo) -> 1 + uncompressed_size hi + uncompressed_size lo
 
 end

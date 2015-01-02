@@ -178,4 +178,6 @@ module type Diagram = sig
   val clear_cache : unit -> unit
   (** [clear_cache ()] clears the internal cache of diagrams. *)
 
+  val compressed_size : t -> int
+  val uncompressed_size : t -> int
 end
