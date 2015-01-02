@@ -1,8 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: 20a19976469deba526494cbc749ee5e1)
+# DO NOT EDIT (digest: 54b5827515857f431b15fcbb97a5520a)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
+true: annot, bin_annot
 <**/.svn>: -traverse
 <**/.svn>: not_hygienic
 ".bzr": -traverse
@@ -19,12 +20,20 @@
 "lib/bdd.cmx": for-pack(Tdk)
 "lib/vcr.cmx": for-pack(Tdk)
 "lib/vlr.cmx": for-pack(Tdk)
+<lib/*.ml{,i,y}>: pkg_core
+<lib/*.ml{,i,y}>: pkg_threads
 # Executable test_vcr
+<lib_test/test_vcr.{native,byte}>: pkg_core
 <lib_test/test_vcr.{native,byte}>: pkg_oUnit
+<lib_test/test_vcr.{native,byte}>: pkg_threads
 <lib_test/test_vcr.{native,byte}>: use_tdk
 # Executable test_bdd
+<lib_test/test_bdd.{native,byte}>: pkg_core
 <lib_test/test_bdd.{native,byte}>: pkg_oUnit
+<lib_test/test_bdd.{native,byte}>: pkg_threads
 <lib_test/test_bdd.{native,byte}>: use_tdk
-<lib_test/*.ml{,i}>: pkg_oUnit
-<lib_test/*.ml{,i}>: use_tdk
+<lib_test/*.ml{,i,y}>: pkg_core
+<lib_test/*.ml{,i,y}>: pkg_oUnit
+<lib_test/*.ml{,i,y}>: pkg_threads
+<lib_test/*.ml{,i,y}>: use_tdk
 # OASIS_STOP

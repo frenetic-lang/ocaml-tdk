@@ -1,7 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 0fa200ccbce77f868e7ff1412069d213)
+# DO NOT EDIT (digest: fd38865780ac2b546b349dcd9461b24e)
 version = "0.1.0"
 description = "The Decision Kit"
+requires = "core threads"
 archive(byte) = "tdk.cma"
 archive(byte, plugin) = "tdk.cma"
 archive(native) = "tdk.cmxa"
