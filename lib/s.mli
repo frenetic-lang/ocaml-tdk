@@ -136,9 +136,6 @@ module type Diagram = sig
       can attempt to reduce the diagram to a value, and then use [peek] to
       extract that value. *)
 
-  val support : t -> v list
-  (** [support t] returns the list of variables that occur in the diagram. *)
-
   val sum : t -> t -> t
   (** [sum a b] returns the disjunction of the two diagrams. The [sum]
       operation on the [r] type is used to combine leaf nodes. *)
@@ -166,19 +163,6 @@ module type Diagram = sig
       applications of [f] to the values that they hold, and branches on
       variables with applications of [g]. *)
 
-  val iter
-    :  ?order:[ `Pre | `Post ]
-    -> (r -> unit)
-    -> (v -> t -> t -> unit)
-    -> t
-    -> unit
-  (** [iter ~order f g t] iterates over the structure of the diagram, calling
-      [f] at leaf nodes and [g] at branch nodes. The user can control the order
-      of the traversal by using the [order] argument. Specifying [`Pre] will
-      cause [iter] to call [g] on a branch node before traversing its children,
-      while specifying [`Post] will cause [iter] to call [g] after it has
-      traversed its children.  *)
-
   val equal : t -> t -> bool
   (** [equal a b] returns whether or not the two diagrams are structurally
       equal.
@@ -193,4 +177,5 @@ module type Diagram = sig
 
   val clear_cache : unit -> unit
   (** [clear_cache ()] clears the internal cache of diagrams. *)
+
 end

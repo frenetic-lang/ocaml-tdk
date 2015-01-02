@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 54b5827515857f431b15fcbb97a5520a)
+# DO NOT EDIT (digest: 6b9c604d11a1104995375ba8d26399c0)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -17,8 +17,6 @@ true: annot, bin_annot
 # Library tdk
 "lib/tdk.cmxs": use_tdk
 "lib/s.cmx": for-pack(Tdk)
-"lib/bdd.cmx": for-pack(Tdk)
-"lib/vcr.cmx": for-pack(Tdk)
 "lib/vlr.cmx": for-pack(Tdk)
 <lib/*.ml{,i,y}>: pkg_core
 <lib/*.ml{,i,y}>: pkg_threads

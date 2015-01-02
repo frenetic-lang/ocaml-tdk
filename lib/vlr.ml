@@ -1,14 +1,88 @@
 open S
 
+module type TABLE = sig
+  val clear : unit -> unit
+  type value
+  val get : value -> int
+  val unget : int -> value
+end
+
+module type TABLE_VALUE = sig
+  type t
+  val hash : t -> int
+  val equal : t -> t -> bool
+end
+
+module PersistentTable (Value : TABLE_VALUE) : TABLE
+  with type value = Value.t = struct
+
+  module T = Hashtbl.Make (Value)
+  (* TODO(arjun): Since these are allocated contiguously, it would be
+     better to use a growable array ArrayList<Int> *)
+  module U = Hashtbl.Make(struct
+    type t = int
+    let hash n = n
+    let equal x y = x = y
+  end)
+
+  type value = Value.t
+
+  let tbl : int T.t = T.create 100
+  let untbl : value U.t = U.create 100
+
+  let idx = ref 0
+
+  let clear () =
+    T.clear tbl;
+    U.clear untbl;
+    idx := 0
+
+  let gensym () =
+    let r = !idx in
+    idx := !idx + 1;
+    r
+
+  let get (v : value) =
+    try
+      T.find tbl v
+    with Not_found ->
+      begin
+        let n = gensym () in
+        T.add tbl v n;
+        U.add untbl n v;
+        n
+      end
+
+  let unget (idx : int) : value = U.find untbl idx
+
+end
+
 module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   type v = V.t * L.t
   type r = R.t
 
   type d
-    = Leaf   of r
-    | Branch of V.t * L.t * t * t
-  and t
-    = { id : int; d : d }
+    = Leaf of r
+    | Branch of V.t * L.t * int * int
+
+  type t = int
+  module T = PersistentTable(struct
+      type t = d
+
+      let hash t = match t with
+        | Leaf r ->
+          (R.hash r) lsl 1
+        | Branch(v, l, t, f) ->
+          (1021 * (V.hash v) + 1031 * (L.hash l) + 1033 * t + 1039 * f) lor 0x1
+
+      let equal a b = match a, b with
+        | Leaf r1, Leaf r2 -> R.compare r1 r2 = 0
+        | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
+          V.compare vx vy = 0 && tx = ty && fx = fy
+            && L.compare lx ly = 0
+        | _, _ -> false
+    end)
+
   (* A tree structure representing the decision diagram. The [Leaf] variant
    * represents a constant function. The [Branch(v, l, t, f)] represents an
    * if-then-else. When variable [v] takes on the value [l], then [t] should
@@ -21,94 +95,17 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
    * important both for efficiency and correctness.
    * *)
 
+  let equal x y = x = y (* comparing ints *)
 
-  let compressed_size (node : t) : int =
-    let open Core.Std in
-    let rec f (node : t) (seen : Int.Set.t) =
-      if Int.Set.mem seen node.id then
-        (0, seen)
-      else
-        match node.d with
-        | Leaf _ -> (1, Int.Set.add seen node.id)
-        | Branch (_, _, hi, lo) ->
-          (* Due to variable-ordering, there is no need to add node.id to seen
-             in the recursive calls *)
-          let (hi_size, seen) = f hi seen in
-          let (lo_size, seen) = f lo seen in
-          (hi_size + lo_size, Int.Set.add seen node.id) in
-    let (size, _) = f node Int.Set.empty in
-    size
-
-  let rec uncompressed_size (node : t) : int = match node.d with
-    | Leaf _ -> 1
-    | Branch (_, _, hi, lo) -> 1 + uncompressed_size hi + uncompressed_size lo
-
-  let equal x y =
-    x.id = y.id
-
-  let rec to_string t = match t.d with
+  let rec to_string t = "to_string broken" (* match T.get t with
     | Leaf r             -> R.to_string r
     | Branch(v, l, t, f) -> Printf.sprintf "B(%s = %s, %s, %s)"
-      (V.to_string v) (L.to_string l) (to_string t) (to_string f)
+      (V.to_string v) (L.to_string l) (to_string t)
+      (to_string (T.get f))
+ *)
+  let clear_cache () = T.clear ()
 
-  type this_t = t
-
-  (* This module implements a cache of decision diagrams using a weak hash
-   * table. This is used to implement sharing of sub-diagrams, which will reduce
-   * overall memory useage.
-   *
-   * NOTE: Code outside of this submodule should not construct a value of type
-   * [t] directly. Instead, the code should construct a value of type [d] and
-   * then call [M.get manager d], which will return a value of type [t]. If no
-   * node exists in the cache, then it will be returned. Otherwise, a new
-   * structure will be allocated with a fresh identifier. *)
-  module M = struct
-    module Table = Hashtbl.Make(struct
-      type t = this_t
-
-      (* TODO(arjun): move hashcode into data strucutre and use smart constructors *)
-      let hash t =
-        match t.d with
-        | Leaf r ->
-          (R.hash r) lsl 1
-        | Branch(v, l, t, f) ->
-          (1021 * (V.hash v) + 1031 * (L.hash l) + 1033 * t.id + 1039 * f.id) lor 0x1
-
-      let equal a b =
-        match a.d, b.d with
-        | Leaf r1, Leaf r2 -> R.compare r1 r2 = 0
-        | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
-          V.compare vx vy = 0 && tx.id = ty.id && fx.id = fy.id
-            && L.compare lx ly = 0
-        | _, _ -> false
-    end)
-
-    type t = { table : this_t Table.t; mutable sym : int }
-
-    let create size = { table = Table.create size; sym = 1 }
-    let clear t = Table.clear t.table
-
-    let gensym t =
-      let s = t.sym in
-      t.sym <- t.sym + 1;
-      s
-
-    let get t d =
-      try Table.find t.table { id = 0; d }
-      with Not_found ->
-        let v = { id = gensym t; d } in
-        Table.add t.table v v;
-        { id = gensym t; d }
-  end
-
-  let manager = M.create 10
-
-  let clear_cache () =
-    M.clear manager;
-    manager.sym <- 1
-
-  let mk_leaf r =
-    M.get manager (Leaf r)
+  let mk_leaf r = T.get (Leaf r)
 
   let mk_branch v l t f =
     (* When the ids of the diagrams are equal, then the diagram will take on the
@@ -121,32 +118,19 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     if equal t f then begin
       t
     end else
-      M.get manager (Branch(v, l, t, f))
+      T.get (Branch(v, l, t, f))
 
-  let rec fold g h t = match t.d with
+  let rec fold g h t = match T.unget t with
     | Leaf r -> g r
     | Branch(v, l, t, f) ->
       h (v, l) (fold g h t) (fold g h f)
-
-  let rec iter ?(order=`Pre) g h t = match t.d with
-    | Leaf r -> g r
-    | Branch(v, l, t, f) ->
-      match order with
-      | `Pre ->
-        h (v, l) t f;
-        iter ~order g h t;
-        iter ~order g h f
-      | `Post ->
-        iter ~order g h t;
-        iter ~order g h f;
-        h (v, l) t f
 
   let const r = mk_leaf r
   let atom (v, l) t f = mk_branch v l (const t) (const f)
 
   let restrict lst =
     let rec loop xs u =
-      match xs, u.d with
+      match xs, T.unget u with
       | []          , _
       | _           , Leaf _ -> u
       | (v,l) :: xs', Branch(v', l', t, f) ->
@@ -158,7 +142,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     in
     loop (List.sort (fun (u, _) (v, _) -> V.compare u v) lst)
 
-  let peek t = match t.d with
+  let peek t = match T.unget t with
     | Leaf r   -> Some r
     | Branch _ -> None
 
@@ -167,7 +151,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     (fun (v, l) t f -> mk_branch v l t f)
 
   let rec prod x y =
-    match x.d, y.d with
+    match T.unget x, T.unget y with
     | Leaf r, _      ->
       if R.(compare r zero) = 0 then x
       else if R.(compare r one) = 0 then y
@@ -195,7 +179,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       end
 
   let rec sum x y =
-    match x.d, y.d with
+    match T.unget x, T.unget y with
     | Leaf r, _      ->
       if R.(compare r zero) = 0 then y
       else map_r (R.sum r) y
@@ -219,12 +203,5 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       |  1 -> mk_branch vy ly (sum x ty) (sum x fy)
       |  _ -> assert false
       end
-
-  let rec support t =
-    (* XXX(seliopou): keep track of diagram size and use that to initialize the
-     * hashtable appropriately. *)
-    let s = Hashtbl.create ~random:true 10 in
-    iter (fun _ -> ()) (fun v _ _ -> Hashtbl.replace s v ()) t;
-    Hashtbl.fold (fun v () acc -> v :: acc) s []
 
 end

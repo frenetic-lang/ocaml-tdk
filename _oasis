@@ -12,7 +12,7 @@ Library tdk
   Findlibname:      tdk
   Pack:             true
   BuildDepends:     core, threads
-  Modules:          S, Bdd, Vcr, Vlr
+  Modules:          S, Vlr
 
 Document tdk
   Title:                Tdk Docs
