@@ -21,6 +21,28 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
    * important both for efficiency and correctness.
    * *)
 
+
+  let compressed_size (node : t) : int =
+    let open Core.Std in
+    let rec f (node : t) (seen : Int.Set.t) =
+      if Int.Set.mem seen node.id then
+        (0, seen)
+      else
+        match node.d with
+        | Leaf _ -> (1, Int.Set.add seen node.id)
+        | Branch (_, _, hi, lo) ->
+          (* Due to variable-ordering, there is no need to add node.id to seen
+             in the recursive calls *)
+          let (hi_size, seen) = f hi seen in
+          let (lo_size, seen) = f lo seen in
+          (hi_size + lo_size, Int.Set.add seen node.id) in
+    let (size, _) = f node Int.Set.empty in
+    size
+
+  let rec uncompressed_size (node : t) : int = match node.d with
+    | Leaf _ -> 1
+    | Branch (_, _, hi, lo) -> 1 + uncompressed_size hi + uncompressed_size lo
+
   let equal x y =
     x.id = y.id
 
@@ -74,11 +96,9 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     let get t d =
       try Table.find t.table { id = 0; d }
       with Not_found ->
-        Table.add t.table { id = gensym t; d };
+        let v = { id = gensym t; d } in
+        Table.add t.table v v;
         { id = gensym t; d }
-
-    let remove t d =
-      Table.remove t.table { id = 0; d }
   end
 
   let manager = M.create 10
