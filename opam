@@ -1,0 +1,16 @@
+opam-version: "1"
+ocaml-version: [ >= "4.01.0" ]
+version: "0.1.0"
+maintainer: "Spiros Eliopoulos <seliopou@gmail.com>"
+build: [
+  ["ocaml" "setup.ml" "-configure" "--prefix" prefix ]
+  ["ocaml" "setup.ml" "-build"]
+  ["ocaml" "setup.ml" "-install"]
+]
+remove: [
+  ["ocamlfind" "remove" "tdk"]
+  ["ocaml" "setup.ml" "-uninstall" ]
+]
+depends: [
+  "ocamlfind"
+]
