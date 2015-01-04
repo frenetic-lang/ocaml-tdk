@@ -129,6 +129,66 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   let const r = mk_leaf r
   let atom (v, l) t f = mk_branch v l (const t) (const f)
 
+  let node_min t1 t2 = match (t1, t2) with
+  | Leaf _, Leaf _ -> (t1, t2) (* constants at same rank since they can't be ordered *)
+  | Leaf _, _ -> (t2, t1)
+  | _, Leaf _ -> (t1, t2)
+  | Branch (v1, l1, _, _), Branch (v2, l2, _, _) -> match V.compare v1 v2 with
+    | -1 -> (t1, t2)
+    | 1 -> (t2, t1)
+    | 0 -> if L.subset_eq l1 l2 then
+             (t1, t2)
+           else if L.subset_eq l2 l1 then
+             (t2, t1)
+           else
+             (* The Spiros case. I don't think it matters which we pick *)
+             (t1, t2)
+    | _ -> assert false
+
+  (* TODO(arjun): This would be easier to implement if variables were explicitly
+     ranked *)
+  let make_cutoff (cutoff : t) : t -> bool -> t = match T.unget cutoff with
+    | Leaf _ -> fun d _ -> d
+    | Branch (x, v, _, _) -> fun node dir ->
+        match T.unget node with
+        | Leaf _ -> node
+        | Branch (x', v', tru, fls) ->
+          match V.compare x x' with
+          | -1 -> node (* we haven't reached a decision on x' yet *)
+          | 1 -> assert false (* should have picked min *)
+          | 0 -> begin match L.subset_eq v v', L.subset_eq v' v with
+            (* identical, just like a BDD *)
+            | (true, true) -> if dir then tru else fls
+            (* v < v', so if x \in v then x \in v' too
+                          if x \notin v, then we can't refine *)
+            | (true, false) -> if dir then tru else node
+            (* v' < v, so if x \notin v then x \notin v'
+                          if x \in v then we can't refine *)
+            | (false, true) -> if dir then node else fls
+            (* incomparable, so knowing x \in v or x \notin v doesn't let
+              us refine at all *)
+            | (false, false) -> node
+            end
+          | _ -> assert false
+
+  let rec apply3 f u1 u2 u3 = match (T.unget u1, T.unget u2, T.unget u3) with
+    | Leaf c1, Leaf c2, Leaf c3 -> mk_leaf (f c1 c2 c3)
+    | t1, t2, t3 ->
+      let (min_t, _) = node_min t2 t3 in
+      let (min_t, _) = node_min t1 min_t in
+      let cutoff = make_cutoff (T.get min_t) in
+      match min_t with
+      | Leaf _ -> assert false (* if this was the min, then we should be at base case *)
+      | Branch (x, v, _, _) ->
+        mk_branch x v
+          (apply3 f (cutoff u1 true) (cutoff u2 true) (cutoff u3 true))
+          (apply3 f (cutoff u1 false) (cutoff u2 false) (cutoff u3 false))
+
+  let rec map_values f u = match T.unget u with
+    | Leaf c -> mk_leaf (f c)
+    | Branch (x, v, tru, fls) ->
+      mk_branch x v (map_values f tru) (map_values f fls)
+
   let restrict lst =
     let rec loop xs u =
       match xs, T.unget u with

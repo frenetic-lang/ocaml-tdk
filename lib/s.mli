@@ -186,4 +186,7 @@ module type Diagram = sig
       graph description language. The result of this function can be rendered
       using Graphviz or any other program that supports the DOT language. *)
 
+  val map_values : (r -> r) -> t -> t
+  val apply3 : (r -> r -> r -> r) -> t -> t -> t -> t
+
 end
