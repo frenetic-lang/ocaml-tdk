@@ -171,6 +171,25 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
             end
           | _ -> assert false
 
+  module H = Core.Std.Hashtbl.Poly
+
+  let apply2 f u1 u2 =
+    let tbl : (int * int, int) H.t = H.create () in
+    let rec apply2 u v =
+      H.find_or_add tbl (u, v) ~default:(fun () -> apply2' u v)
+    and apply2' u1 u2 = match (T.unget u1, T.unget u2) with
+      | Leaf c1, Leaf c2 -> mk_leaf (f c1 c2)
+      | t1, t2->
+        let (min_t, _) = node_min t1 t2 in
+        let cutoff = make_cutoff (T.get min_t) in
+        match min_t with
+        | Leaf _ -> assert false (* if this was the min, then we should be at base case *)
+        | Branch (x, v, _, _) ->
+          mk_branch x v
+            (apply2 (cutoff u1 true) (cutoff u2 true))
+            (apply2 (cutoff u1 false) (cutoff u2 false))
+    in apply2 u1 u2
+
   let rec apply3 f u1 u2 u3 = match (T.unget u1, T.unget u2, T.unget u3) with
     | Leaf c1, Leaf c2, Leaf c3 -> mk_leaf (f c1 c2 c3)
     | t1, t2, t3 ->
@@ -239,8 +258,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       |  _ -> assert false
       end
 
-  module H = Core.Std.Hashtbl.Poly
-  let sum x y =
+  let sum_generalized f x y =
     let tbl : (int * int, int) H.t = H.create () in
     let rec sum x y =
       H.find_or_add tbl (x, y) ~default:(fun () -> sum' x y)
@@ -248,10 +266,10 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       match T.unget x, T.unget y with
       | Leaf r, _      ->
         if R.(compare r zero) = 0 then y
-        else map_r (R.sum r) y
+        else map_r (f r) y
       | _     , Leaf r ->
         if R.(compare zero r) = 0 then x
-        else map_r (fun x -> R.sum x r) x
+        else map_r (fun x -> f x r) x
       | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
         begin match V.compare vx vy with
         |  0 ->
@@ -270,6 +288,9 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         |  _ -> assert false
         end
     in sum x y
+
+  let sum = sum_generalized R.sum
+
 
   let compressed_size (node : t) : int =
     let open Core.Std in
