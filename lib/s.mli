@@ -109,7 +109,6 @@ module type Diagram = sig
   type r
   (** The type of the result of a decision diagram *)
 
-
   val const : r -> t
   (** [const r] creates a constant diagram out of [r]. *)
 
@@ -189,7 +188,5 @@ module type Diagram = sig
       using Graphviz or any other program that supports the DOT language. *)
 
   val map_values : (r -> r) -> t -> t
-  val apply3 : (r -> r -> r -> r) -> t -> t -> t -> t
-  val apply2 : (r -> r -> r) -> t -> t -> t
 
 end

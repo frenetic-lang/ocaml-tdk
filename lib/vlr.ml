@@ -63,7 +63,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   type d
     = Leaf of r
-    | Branch of V.t * L.t * int * int
+    | Branch of v * int * int
 
   type t = int
   module T = PersistentTable(struct
@@ -72,12 +72,12 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       let hash t = match t with
         | Leaf r ->
           (R.hash r) lsl 1
-        | Branch(v, l, t, f) ->
+        | Branch((v, l), t, f) ->
           (1021 * (V.hash v) + 1031 * (L.hash l) + 1033 * t + 1039 * f) lor 0x1
 
       let equal a b = match a, b with
         | Leaf r1, Leaf r2 -> R.compare r1 r2 = 0
-        | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
+        | Branch((vx, lx), tx, fx), Branch((vy, ly), ty, fy) ->
           V.compare vx vy = 0 && tx = ty && fx = fy
             && L.compare lx ly = 0
         | _, _ -> false
@@ -119,11 +119,11 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     if equal t f then begin
       t
     end else
-      T.get (Branch(v, l, t, f))
+      T.get (Branch((v, l), t, f))
 
   let rec fold g h t = match T.unget t with
     | Leaf r -> g r
-    | Branch(v, l, t, f) ->
+    | Branch((v, l), t, f) ->
       h (v, l) (fold g h t) (fold g h f)
 
   let const r = mk_leaf r
@@ -133,7 +133,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   | Leaf _, Leaf _ -> (t1, t2) (* constants at same rank since they can't be ordered *)
   | Leaf _, _ -> (t2, t1)
   | _, Leaf _ -> (t1, t2)
-  | Branch (v1, l1, _, _), Branch (v2, l2, _, _) -> match V.compare v1 v2 with
+  | Branch ((v1, l1), _, _), Branch ((v2, l2), _, _) -> match V.compare v1 v2 with
     | -1 -> (t1, t2)
     | 1 -> (t2, t1)
     | 0 -> if L.subset_eq l1 l2 then
@@ -145,67 +145,13 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
              (t1, t2)
     | _ -> assert false
 
-  (* TODO(arjun): This would be easier to implement if variables were explicitly
-     ranked *)
-  let make_cutoff (cutoff : t) : t -> bool -> t = match T.unget cutoff with
-    | Leaf _ -> fun d _ -> d
-    | Branch (x, v, _, _) -> fun node dir ->
-        match T.unget node with
-        | Leaf _ -> node
-        | Branch (x', v', tru, fls) ->
-          match V.compare x x' with
-          | -1 -> node (* we haven't reached a decision on x' yet *)
-          | 1 -> assert false (* should have picked min *)
-          | 0 -> begin match L.subset_eq v v', L.subset_eq v' v with
-            (* identical, just like a BDD *)
-            | (true, true) -> if dir then tru else fls
-            (* v < v', so if x \in v then x \in v' too
-                          if x \notin v, then we can't refine *)
-            | (true, false) -> if dir then tru else node
-            (* v' < v, so if x \notin v then x \notin v'
-                          if x \in v then we can't refine *)
-            | (false, true) -> if dir then node else fls
-            (* incomparable, so knowing x \in v or x \notin v doesn't let
-              us refine at all *)
-            | (false, false) -> node
-            end
-          | _ -> assert false
 
   module H = Core.Std.Hashtbl.Poly
 
-  let apply2 f u1 u2 =
-    let tbl : (int * int, int) H.t = H.create () in
-    let rec apply2 u v =
-      H.find_or_add tbl (u, v) ~default:(fun () -> apply2' u v)
-    and apply2' u1 u2 = match (T.unget u1, T.unget u2) with
-      | Leaf c1, Leaf c2 -> mk_leaf (f c1 c2)
-      | t1, t2->
-        let (min_t, _) = node_min t1 t2 in
-        let cutoff = make_cutoff (T.get min_t) in
-        match min_t with
-        | Leaf _ -> assert false (* if this was the min, then we should be at base case *)
-        | Branch (x, v, _, _) ->
-          mk_branch x v
-            (apply2 (cutoff u1 true) (cutoff u2 true))
-            (apply2 (cutoff u1 false) (cutoff u2 false))
-    in apply2 u1 u2
-
-  let rec apply3 f u1 u2 u3 = match (T.unget u1, T.unget u2, T.unget u3) with
-    | Leaf c1, Leaf c2, Leaf c3 -> mk_leaf (f c1 c2 c3)
-    | t1, t2, t3 ->
-      let (min_t, _) = node_min t2 t3 in
-      let (min_t, _) = node_min t1 min_t in
-      let cutoff = make_cutoff (T.get min_t) in
-      match min_t with
-      | Leaf _ -> assert false (* if this was the min, then we should be at base case *)
-      | Branch (x, v, _, _) ->
-        mk_branch x v
-          (apply3 f (cutoff u1 true) (cutoff u2 true) (cutoff u3 true))
-          (apply3 f (cutoff u1 false) (cutoff u2 false) (cutoff u3 false))
 
   let rec map_values f u = match T.unget u with
     | Leaf c -> mk_leaf (f c)
-    | Branch (x, v, tru, fls) ->
+    | Branch ((x, v), tru, fls) ->
       mk_branch x v (map_values f tru) (map_values f fls)
 
   let restrict lst =
@@ -213,7 +159,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       match xs, T.unget u with
       | []          , _
       | _           , Leaf _ -> u
-      | (v,l) :: xs', Branch(v', l', t, f) ->
+      | (v,l) :: xs', Branch((v', l'), t, f) ->
         match V.compare v v' with
         |  0 -> if L.subset_eq l l' then loop xs' t else loop xs f
         | -1 -> loop xs' u
@@ -240,7 +186,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       if R.(compare zero r) = 0 then y
       else if R.(compare one r) = 0 then x
       else map_r (fun x -> R.prod x r) x
-    | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
+    | Branch((vx, lx), tx, fx), Branch((vy, ly), ty, fy) ->
       begin match V.compare vx vy with
       |  0 ->
         begin match L.meet ~tight:true lx ly with
@@ -261,7 +207,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   let sum_generalized f x y =
     let tbl : (int * int, int) H.t = H.create () in
     let rec sum x y =
-      H.find_or_add tbl (x, y) ~default:(fun () -> sum' x y)
+       H.find_or_add tbl (x, y) ~default:(fun () -> sum' x y)
     and sum' x y =
       match T.unget x, T.unget y with
       | Leaf r, _      ->
@@ -270,7 +216,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       | _     , Leaf r ->
         if R.(compare zero r) = 0 then x
         else map_r (fun x -> f x r) x
-      | Branch(vx, lx, tx, fx), Branch(vy, ly, ty, fy) ->
+      | Branch((vx, lx), tx, fx), Branch((vy, ly), ty, fy) ->
         begin match V.compare vx vy with
         |  0 ->
           begin match L.join ~tight:true lx ly with
@@ -300,7 +246,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       else
         match T.unget node with
         | Leaf _ -> (1, Int.Set.add seen node)
-        | Branch (_, _, hi, lo) ->
+        | Branch (_, hi, lo) ->
           (* Due to variable-ordering, there is no need to add node.id to seen
              in the recursive calls *)
           let (hi_size, seen) = f hi seen in
@@ -311,7 +257,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   let rec uncompressed_size (node : t) : int = match T.unget node with
     | Leaf _ -> 1
-    | Branch (_, _, hi, lo) -> 1 + uncompressed_size hi + uncompressed_size lo
+    | Branch (_, hi, lo) -> 1 + uncompressed_size hi + uncompressed_size lo
 
   module VH = Hashtbl.Make(struct
     type t = v
@@ -337,7 +283,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         match T.unget t with
         | Leaf r ->
           fprintf fmt "%d [shape=box label=\"%s\"];@\n" t (R.to_string r)
-        | Branch(v, l, a, b) ->
+        | Branch((v, l), a, b) ->
           begin
             try Hashtbl.add (VH.find rank (v, l)) t ()
             with Not_found ->
