@@ -131,28 +131,24 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   (* SJS: quick and dirty -- this shouldn't be in here *)
   let to_table t =
-    let rec to_table t tbl pattern =
+    let rec next_table_row t tbl pattern =
       match T.unget t with
       | Leaf r -> (None, (pattern, r) :: tbl)
       | Branch (v, l, t, f) ->
-        let (t_rest, tbl) = to_table t tbl ((v,l) :: pattern) in
+        let (t_rest, tbl) = next_table_row t tbl ((v,l) :: pattern) in
         begin match t_rest with
         | None -> (Some f, tbl)
-        | Some t' ->
-          if equal t' f then
-            (Some t', tbl)
-          else
-            to_table (mk_branch v l t' f) tbl pattern
+        | Some t' -> (Some (mk_branch v l t' f), tbl)
         end
     in
-    let rec finish_rest rest tbl =
-      match to_table rest tbl [] with
+    let rec to_table t tbl =
+      match next_table_row t tbl [] with
       | None, tbl -> List.rev tbl
-      | Some rest, tbl -> finish_rest rest tbl
+      | Some rest, tbl -> to_table rest tbl
     in
-    match to_table t [] [] with
+    match next_table_row t [] [] with
     | None, tbl -> List.rev tbl
-    | Some rest, tbl -> finish_rest rest tbl
+    | Some rest, tbl -> to_table rest tbl
 
 
   let node_min t1 t2 = match (t1, t2) with
