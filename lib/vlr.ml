@@ -137,11 +137,11 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     let rec next_table_row t tbl pattern =
       match T.unget t with
       | Leaf r -> (None, (pattern, r) :: tbl)
-      | Branch (v, l, t, f) ->
+      | Branch ((v, l), t, f) ->
         let (t_rest, tbl) = next_table_row t tbl ((v,l) :: pattern) in
         begin match t_rest with
         | None -> (Some f, tbl)
-        | Some t' -> (Some (mk_branch v l t' f), tbl)
+        | Some t' -> (Some (mk_branch (v,l) t' f), tbl)
         end
     in
     let rec to_table t tbl =
