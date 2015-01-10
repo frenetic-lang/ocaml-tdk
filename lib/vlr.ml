@@ -83,6 +83,9 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         | _, _ -> false
     end)
 
+  let get = T.get
+  let unget = T.unget
+
   (* A tree structure representing the decision diagram. The [Leaf] variant
    * represents a constant function. The [Branch(v, l, t, f)] represents an
    * if-then-else. When variable [v] takes on the value [l], then [t] should
@@ -108,7 +111,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
   let mk_leaf r = T.get (Leaf r)
 
 
-  let mk_branch v l t f =
+  let mk_branch (v,l) t f =
     (* When the ids of the diagrams are equal, then the diagram will take on the
        same value regardless of variable assignment. The node that's being
        constructed can therefore be eliminated and replaced with one of the
@@ -127,7 +130,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       h (v, l) (fold g h t) (fold g h f)
 
   let const r = mk_leaf r
-  let atom (v, l) t f = mk_branch v l (const t) (const f)
+  let atom (v, l) t f = mk_branch (v,l) (const t) (const f)
 
   let node_min t1 t2 = match (t1, t2) with
   | Leaf _, Leaf _ -> (t1, t2) (* constants at same rank since they can't be ordered *)
@@ -148,11 +151,30 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   module H = Core.Std.Hashtbl.Poly
 
-
   let rec map_values f u = match T.unget u with
     | Leaf c -> mk_leaf (f c)
     | Branch ((x, v), tru, fls) ->
-      mk_branch x v (map_values f tru) (map_values f fls)
+      mk_branch (x, v) (map_values f tru) (map_values f fls)
+
+  let rec restrict' ((x1, l1) : v) (is_true : bool) (t : t) : t=
+    match unget t with
+    | Leaf r -> t
+    | Branch ((x2, l2), tru, fls) ->
+      match V.compare x1 x2 with
+      | 1 -> t
+      | -1 ->
+        if is_true then mk_branch (x1,l1) t (mk_leaf R.zero)
+        else mk_branch (x1,l1) (mk_leaf R.zero) t
+      | 0 ->
+        if L.subset_eq l2 l1 then
+          (if is_true then t else mk_leaf R.zero)
+        else if L.subset_eq l1 l2 then
+          mk_branch (x2,l2) (restrict' (x1,l1) is_true tru) fls
+        (* TODO(arjun): disjoint assumption. Does not work for prefixes *)
+        else
+          (if is_true then mk_leaf R.zero else tru)
+      | _ -> assert false
+
 
   let restrict lst =
     let rec loop xs u =
@@ -163,7 +185,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         match V.compare v v' with
         |  0 -> if L.subset_eq l l' then loop xs' t else loop xs f
         | -1 -> loop xs' u
-        |  1 -> mk_branch v' l' (loop xs t) (loop xs f)
+        |  1 -> mk_branch (v',l') (loop xs t) (loop xs f)
         |  _ -> assert false
     in
     loop (List.sort (fun (u, _) (v, _) -> V.compare u v) lst)
@@ -174,7 +196,7 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
 
   let rec map_r g = fold
     (fun r          -> const (g r))
-    (fun (v, l) t f -> mk_branch v l t f)
+    (fun (v, l) t f -> mk_branch (v,l) t f)
 
   let rec prod x y =
     match T.unget x, T.unget y with
@@ -190,17 +212,17 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
       begin match V.compare vx vy with
       |  0 ->
         begin match L.meet ~tight:true lx ly with
-        | Some(l) -> mk_branch vx l (prod tx ty) (prod fx fy)
+        | Some(l) -> mk_branch (vx,l) (prod tx ty) (prod fx fy)
         | None    ->
           begin match L.compare lx ly with
           |  0 -> assert false
-          | -1 -> mk_branch vx lx (prod tx (restrict [(vx, lx)] y)) (prod fx y)
-          |  1 -> mk_branch vy ly (prod (restrict [(vy, ly)] x) ty) (prod x fy)
+          | -1 -> mk_branch (vx,lx) (prod tx (restrict [(vx, lx)] y)) (prod fx y)
+          |  1 -> mk_branch (vy,ly) (prod (restrict [(vy, ly)] x) ty) (prod x fy)
           |  _ -> assert false
           end
         end
-      | -1 -> mk_branch vx lx (prod tx y) (prod fx y)
-      |  1 -> mk_branch vy ly (prod x ty) (prod x fy)
+      | -1 -> mk_branch (vx,lx) (prod tx y) (prod fx y)
+      |  1 -> mk_branch (vy,ly) (prod x ty) (prod x fy)
       |  _ -> assert false
       end
 
@@ -220,23 +242,22 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
         begin match V.compare vx vy with
         |  0 ->
           begin match L.join ~tight:true lx ly with
-          | Some(l) -> mk_branch vx l (sum tx ty) (sum fx fy)
+          | Some(l) -> mk_branch (vx,l) (sum tx ty) (sum fx fy)
           | None    ->
             begin match L.compare lx ly with
             |  0 -> assert false
-            | -1 -> mk_branch vx lx (sum tx (restrict [(vx, lx)] y)) (sum fx y)
-            |  1 -> mk_branch vy ly (sum (restrict [(vy, ly)] x) ty) (sum x fy)
+            | -1 -> mk_branch (vx,lx) (sum tx (restrict [(vx, lx)] y)) (sum fx y)
+            |  1 -> mk_branch (vy,ly) (sum (restrict [(vy, ly)] x) ty) (sum x fy)
             |  _ -> assert false
             end
           end
-        | -1 -> mk_branch vx lx (sum tx y) (sum fx y)
-        |  1 -> mk_branch vy ly (sum x ty) (sum x fy)
+        | -1 -> mk_branch (vx,lx) (sum tx y) (sum fx y)
+        |  1 -> mk_branch (vy,ly) (sum x ty) (sum x fy)
         |  _ -> assert false
         end
     in sum x y
 
   let sum = sum_generalized R.sum
-
 
   let compressed_size (node : t) : int =
     let open Core.Std in

@@ -109,6 +109,15 @@ module type Diagram = sig
   type r
   (** The type of the result of a decision diagram *)
 
+  type d
+    = Leaf of r
+    | Branch of v * t * t
+
+  val get : d -> t
+  val unget : t -> d
+  val mk_branch : v -> t -> t -> t
+  val mk_leaf : r -> t
+
   val const : r -> t
   (** [const r] creates a constant diagram out of [r]. *)
 
