@@ -97,12 +97,19 @@ module Make(V:HashCmp)(L:Lattice)(R:Result) = struct
     end else
       M.get manager (Branch(v, l, t, f))
 
-  let rec fold g h t = match t.d with
+  let rec fold g h t =
+    match t.d with
     | Leaf r -> g r
     | Branch(v, l, t, f) ->
       h (v, l) (fold g h t) (fold g h f)
 
-  let rec iter ?(order=`Pre) g h t = match t.d with
+  let destruct g h t =
+    match t.d with
+    | Leaf r -> g r
+    | Branch(v, l, t, f) -> h (v, l) t f
+
+  let rec iter ?(order=`Pre) g h t =
+    match t.d with
     | Leaf r -> g r
     | Branch(v, l, t, f) ->
       match order with

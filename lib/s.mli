@@ -166,6 +166,16 @@ module type Diagram = sig
       applications of [f] to the values that they hold, and branches on
       variables with applications of [g]. *)
 
+  val destruct
+   :  (r -> 'a)
+   -> (v -> t -> t -> 'a)
+   -> t
+   -> 'a
+  (** [destruct f g t] decomposes the top node of the diagram. [f] will be
+      called if the diagram is a constant leaf node. Otherwise, [g] will be
+      called with the decision variable, followed by the true branch, and the
+      false branch of the diagram, respectively. *)
+
   val iter
     :  ?order:[ `Pre | `Post ]
     -> (r -> unit)

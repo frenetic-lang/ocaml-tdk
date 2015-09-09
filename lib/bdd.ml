@@ -44,6 +44,7 @@ module Make(V:HashCmp) = struct
   let map_r = B.map_r
 
   let fold = B.fold
+  let destruct = B.destruct
   let iter = B.iter
 
   let equal = B.equal
