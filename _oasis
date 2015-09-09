@@ -1,8 +1,12 @@
 OASISFormat: 0.4
 Name:        tdk
-Version:     0.1.1
+Version:     0.2.0
 Synopsis:    The Decision Kit
-Authors:     Spiros Eliopoulos
+Description: The Decision Kit is a collection of data structures that are
+             useful for representing functions, relations, and other combinatorial objects.
+             These data structures are based on various generalizations of reduced ordered
+             binary decision diagrams.
+Authors:     Spiros Eliopoulos <seliopou@gmail.com>
 License:     BSD-3-clause
 Plugins:     Meta (0.4), DevFiles (0.4)
 BuildTools:  ocamlbuild
